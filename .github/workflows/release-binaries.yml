@@ -3,8 +3,12 @@ name: Release Binaries
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch: # 允许手动触发
+      - 'ffmpeg-*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. ffmpeg-8.1)'
+        required: true
 
 jobs:
   build-and-release:
@@ -12,46 +16,52 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Tools
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl tar unzip
+          sudo apt-get install -y unzip tar xz-utils
 
-      - name: Execute Download Script
+      - name: Download binaries
         run: |
-          chmod +x scripts/download-ffmpeg.sh
-          ./scripts/download-ffmpeg.sh
+          python3 scripts/download_binaries.py
 
-      - name: Generate Checksums
+      - name: Verify output
         run: |
-          cd binaries
-          sha256sum * > checksums.txt
-          echo "Generated Checksums:"
-          cat checksums.txt
+          ls -lh binaries
+          echo
+          cat binaries/SHA256SUMS.txt
 
-      - name: Create GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            binaries/*
-          name: "FFmpeg & FFprobe Sidecars ${{ github.ref_name }}"
+          tag_name: ${{ env.TAG }}
+          name: FFmpeg Sidecars ${{ env.TAG }}
+          files: binaries/*
           body: |
-            FFmpeg and FFprobe binaries for Lap project sidecars.
-            
-            **Version:** Based on FFmpeg 8.1 (Essentials/GPL)
-            **Platform Triples:**
+            Prebuilt FFmpeg / FFprobe sidecar binaries for Lap.
+
+            Version: FFmpeg 8.1
+
+            Targets:
             - x86_64-apple-darwin
             - aarch64-apple-darwin
             - x86_64-pc-windows-msvc
             - x86_64-unknown-linux-gnu
             - aarch64-unknown-linux-gnu
-            
-            Please verify the files using the included `checksums.txt`.
-          draft: false
-          prerelease: false
+
+            Integrity:
+            - SHA256SUMS.txt included
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
