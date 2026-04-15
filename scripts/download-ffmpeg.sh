@@ -14,7 +14,7 @@ TEMP_DIR="./temp_downloads"
 # If ffprobe_url is "INCLUDED", it means ffprobe is in the same archive as ffmpeg.
 TARGETS=(
     "x86_64-apple-darwin|https://evermeet.cx/ffmpeg/getrelease/zip|https://evermeet.cx/ffprobe/getrelease/zip|zip|."
-    "aarch64-apple-darwin|https://evermeet.cx/ffmpeg/getrelease/zip|https://evermeet.cx/ffprobe/getrelease/zip|zip|."
+    "aarch64-apple-darwin|https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffmpeg.zip|https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffprobe.zip|zip|."
     "x86_64-pc-windows-msvc|https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip|INCLUDED|zip|ffmpeg-*-essentials_build/bin"
     "x86_64-unknown-linux-gnu|https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz|INCLUDED|tar.xz|ffmpeg-master-latest-linux64-gpl/bin"
     "aarch64-unknown-linux-gnu|https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz|INCLUDED|tar.xz|ffmpeg-master-latest-linuxarm64-gpl/bin"
