@@ -1,0 +1,57 @@
+name: Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl tar unzip
+
+      - name: Execute Download Script
+        run: |
+          chmod +x scripts/download-ffmpeg.sh
+          ./scripts/download-ffmpeg.sh
+
+      - name: Generate Checksums
+        run: |
+          cd binaries
+          sha256sum * > checksums.txt
+          echo "Generated Checksums:"
+          cat checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            binaries/*
+          name: "FFmpeg & FFprobe Sidecars ${{ github.ref_name }}"
+          body: |
+            FFmpeg and FFprobe binaries for Lap project sidecars.
+            
+            **Version:** Based on FFmpeg 8.1 (Essentials/GPL)
+            **Platform Triples:**
+            - x86_64-apple-darwin
+            - aarch64-apple-darwin
+            - x86_64-pc-windows-msvc
+            - x86_64-unknown-linux-gnu
+            - aarch64-unknown-linux-gnu
+            
+            Please verify the files using the included `checksums.txt`.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
