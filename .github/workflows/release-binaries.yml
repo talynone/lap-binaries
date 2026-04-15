@@ -35,7 +35,7 @@ jobs:
 
       - name: Download binaries
         run: |
-          python3 scripts/download_binaries.py
+          python3 scripts/download-ffmpeg.py
 
       - name: Verify output
         run: |
