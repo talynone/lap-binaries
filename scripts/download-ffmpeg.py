@@ -17,7 +17,7 @@ TARGETS = [
     {
         "triple": "x86_64-apple-darwin",
         "ffmpeg": "https://evermeet.cx/ffmpeg/getrelease/zip",
-        "ffprobe": "https://evermeet.cx/ffprobe/getrelease/zip",
+        "ffprobe": "https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip",
         "ext": "zip"
     },
     {
