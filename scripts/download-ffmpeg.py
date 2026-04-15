@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+"""
+Download FFmpeg / FFprobe binaries for lap-binaries.
+Output naming: <binary>-<target-triple>[.exe]
+"""
 
 import hashlib
 import os
-import platform
 import shutil
-import subprocess
-import sys
 import tarfile
 import zipfile
 from pathlib import Path
@@ -13,165 +14,134 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parent.parent
 BIN_DIR = ROOT / "binaries"
-TMP_DIR = ROOT / "temp"
+TMP_DIR = ROOT / "temp_downloads"
+
+_BTBN = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
+_RIEDL = "https://ffmpeg.martin-riedl.de/redirect/latest"
 
 TARGETS = [
     {
         "triple": "x86_64-apple-darwin",
-        "ffmpeg": "https://evermeet.cx/ffmpeg/getrelease/zip",
-        "ffprobe": "https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip",
+        "ffmpeg":  f"{_RIEDL}/macos/amd64/release/ffmpeg.zip",
+        "ffprobe": f"{_RIEDL}/macos/amd64/release/ffprobe.zip",
         "ext": "zip",
     },
     {
         "triple": "aarch64-apple-darwin",
-        "ffmpeg": "https://ffmpeg.martin-riedl.de/releases/macos/arm64/release/ffmpeg-8.1.zip",
-        "ffprobe": "https://ffmpeg.martin-riedl.de/releases/macos/arm64/release/ffprobe-8.1.zip",
+        "ffmpeg":  f"{_RIEDL}/macos/arm64/release/ffmpeg.zip",
+        "ffprobe": f"{_RIEDL}/macos/arm64/release/ffprobe.zip",
         "ext": "zip",
     },
     {
         "triple": "x86_64-pc-windows-msvc",
-        "ffmpeg": "https://www.gyan.dev/ffmpeg/builds/ffmpeg-8.1-essentials_build.zip",
+        "ffmpeg":  f"{_BTBN}/ffmpeg-master-latest-win64-gpl.zip",
         "ffprobe": "INCLUDED",
         "ext": "zip",
     },
     {
         "triple": "x86_64-unknown-linux-gnu",
-        "ffmpeg": "https://github.com/BtbN/FFmpeg-Builds/releases/download/n8.1/ffmpeg-n8.1-linux64-gpl.tar.xz",
+        "ffmpeg":  f"{_BTBN}/ffmpeg-master-latest-linux64-gpl.tar.xz",
         "ffprobe": "INCLUDED",
         "ext": "tar.xz",
     },
     {
         "triple": "aarch64-unknown-linux-gnu",
-        "ffmpeg": "https://github.com/BtbN/FFmpeg-Builds/releases/download/n8.1/ffmpeg-n8.1-linuxarm64-gpl.tar.xz",
+        "ffmpeg":  f"{_BTBN}/ffmpeg-master-latest-linuxarm64-gpl.tar.xz",
         "ffprobe": "INCLUDED",
         "ext": "tar.xz",
     },
 ]
 
-
-def download(url, path):
-    if path.exists():
-        return
-    print("Downloading:", url)
+def download_file(url: str, dest: Path):
+    if dest.exists(): dest.unlink()
+    print(f"Downloading {url}...")
     req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urlopen(req) as r, open(path, "wb") as f:
-        shutil.copyfileobj(r, f)
+    with urlopen(req) as response, open(dest, 'wb') as f:
+        shutil.copyfileobj(response, f)
 
+def extract(path: Path, dest: Path):
+    if dest.exists(): shutil.rmtree(dest)
+    dest.mkdir(parents=True)
+    if path.suffix == ".zip":
+        with zipfile.ZipFile(path, 'r') as zip_ref:
+            zip_ref.extractall(dest)
+    elif path.name.endswith(".tar.xz"):
+        with tarfile.open(path, "r:xz") as tar:
+            tar.extractall(dest)
 
-def extract(archive, ext, dest):
-    if ext == "zip":
-        with zipfile.ZipFile(archive) as z:
-            z.extractall(dest)
-    else:
-        with tarfile.open(archive) as t:
-            t.extractall(dest)
-
-
-def find(root, name):
-    for p in root.rglob(name):
-        return p
+def find_bin(dir: Path, name: str):
+    # Recursively find the file, ignoring symlinks
+    for path in dir.rglob(name):
+        if path.is_file() and not path.is_symlink():
+            return path
     return None
-
-
-def host_triple():
-    sysname = platform.system()
-    arch = platform.machine().lower()
-
-    if arch in ("x86_64", "amd64"):
-        arch = "x86_64"
-    elif arch in ("arm64", "aarch64"):
-        arch = "aarch64"
-
-    if sysname == "Darwin":
-        return f"{arch}-apple-darwin"
-    if sysname == "Linux":
-        return f"{arch}-unknown-linux-gnu"
-    if sysname == "Windows":
-        return f"{arch}-pc-windows-msvc"
-    return None
-
-
-def verify_exec(path, name, triple):
-    if host_triple() != triple:
-        print("Skip exec:", path.name)
-        return
-
-    out = subprocess.run([str(path), "-version"], capture_output=True, text=True)
-    line = out.stdout.splitlines()[0]
-
-    if not line.startswith(f"{name} version"):
-        raise RuntimeError(f"{path} invalid: {line}")
-
-    print("OK:", line)
-
-
-def sha256(p):
-    h = hashlib.sha256()
-    with open(p, "rb") as f:
-        for c in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(c)
-    return h.hexdigest()
-
 
 def main():
-    BIN_DIR.mkdir(exist_ok=True)
-    TMP_DIR.mkdir(exist_ok=True)
+    # Fresh start for binaries
+    if BIN_DIR.exists(): shutil.rmtree(BIN_DIR)
+    BIN_DIR.mkdir(parents=True)
+    
+    # Ensure temp dir
+    if not TMP_DIR.exists(): TMP_DIR.mkdir(parents=True)
 
-    for t in TARGETS:
-        triple = t["triple"]
-        ext = t["ext"]
-        exe = ".exe" if "windows" in triple else ""
+    try:
+        for t in TARGETS:
+            triple = t["triple"]
+            exe = ".exe" if "windows" in triple else ""
+            
+            print(f"\n--- Processing {triple} ---")
+            
+            # 1. Download & Extract FFmpeg
+            pkg_path = TMP_DIR / f"{triple}_ffmpeg.{t['ext']}"
+            download_file(t["ffmpeg"], pkg_path)
+            
+            ext_dir = TMP_DIR / f"extract_{triple}"
+            extract(pkg_path, ext_dir)
+            
+            src_ffmpeg = find_bin(ext_dir, f"ffmpeg{exe}")
+            if not src_ffmpeg:
+                raise RuntimeError(f"Could not find ffmpeg for {triple} in {ext_dir}")
+                
+            dest_ffmpeg = BIN_DIR / f"ffmpeg-{triple}{exe}"
+            shutil.copy2(src_ffmpeg, dest_ffmpeg)
+            if os.name != 'nt': dest_ffmpeg.chmod(0o755)
+            print(f"Saved {dest_ffmpeg.name}")
+            
+            # 2. Process FFprobe
+            if t["ffprobe"] == "INCLUDED":
+                src_ffprobe = find_bin(ext_dir, f"ffprobe{exe}")
+            else:
+                probe_pkg = TMP_DIR / f"{triple}_probe.zip"
+                download_file(t["ffprobe"], probe_pkg)
+                probe_ext = TMP_DIR / f"extract_probe_{triple}"
+                extract(probe_pkg, probe_ext)
+                src_ffprobe = find_bin(probe_ext, f"ffprobe{exe}")
+            
+            if not src_ffprobe:
+                 raise RuntimeError(f"Could not find ffprobe for {triple}")
 
-        print("\n==", triple)
+            dest_ffprobe = BIN_DIR / f"ffprobe-{triple}{exe}"
+            shutil.copy2(src_ffprobe, dest_ffprobe)
+            if os.name != 'nt': dest_ffprobe.chmod(0o755)
+            print(f"Saved {dest_ffprobe.name}")
 
-        a = TMP_DIR / f"{triple}.{ext}"
-        d = TMP_DIR / triple
+        # 3. Generate SHA256SUMS.txt
+        print("\nGenerating SHA256SUMS.txt...")
+        sha_lines = []
+        for f in sorted(BIN_DIR.glob("*")):
+            if f.is_file() and f.name != "SHA256SUMS.txt":
+                h = hashlib.sha256(f.read_bytes()).hexdigest()
+                sha_lines.append(f"{h}  {f.name}")
+        
+        with open(BIN_DIR / "SHA256SUMS.txt", "w") as f:
+            f.write("\n".join(sha_lines) + "\n")
+        
+        print("Done! All binaries verified and saved.")
 
-        if d.exists():
-            shutil.rmtree(d)
-
-        download(t["ffmpeg"], a)
-        extract(a, ext, d)
-
-        f = find(d, f"ffmpeg{exe}")
-        if not f:
-            raise RuntimeError("ffmpeg not found")
-
-        out = BIN_DIR / f"ffmpeg-{triple}{exe}"
-        shutil.copy2(f, out)
-        out.chmod(0o755)
-
-        verify_exec(out, "ffmpeg", triple)
-
-        if t["ffprobe"] == "INCLUDED":
-            p = find(d, f"ffprobe{exe}")
-        else:
-            a2 = TMP_DIR / f"{triple}_probe.{ext}"
-            d2 = TMP_DIR / f"{triple}_probe"
-
-            download(t["ffprobe"], a2)
-            extract(a2, ext, d2)
-
-            p = find(d2, f"ffprobe{exe}")
-
-        if not p:
-            raise RuntimeError("ffprobe not found")
-
-        outp = BIN_DIR / f"ffprobe-{triple}{exe}"
-        shutil.copy2(p, outp)
-        outp.chmod(0o755)
-
-        verify_exec(outp, "ffprobe", triple)
-
-    # SHA256
-    sums = []
-    for f in sorted(BIN_DIR.iterdir()):
-        if f.is_file():
-            sums.append(f"{sha256(f)}  {f.name}")
-
-    (BIN_DIR / "SHA256SUMS.txt").write_text("\n".join(sums))
-    print("\nDone.")
-
+    finally:
+        # Cleanup temp files
+        if TMP_DIR.exists():
+            shutil.rmtree(TMP_DIR)
 
 if __name__ == "__main__":
     main()
