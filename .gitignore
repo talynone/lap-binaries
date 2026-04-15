@@ -1,0 +1,9 @@
+# Ignore temp files
+binaries
+temp_downloads/
+*.zip
+*.tar.xz
+*.tar.gz
+
+# Do NOT ignore binaries as this repo is dedicated to them
+# !binaries/
