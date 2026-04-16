@@ -16,8 +16,8 @@ _BTBN = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
 TARGETS = [
     {
         "triple": "x86_64-apple-darwin",
-        "ffmpeg": "https://evermeet.cx/ffmpeg/getrelease/zip",
-        "ffprobe": "https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip",
+        "ffmpeg": f"{_RIEDL}/macos/x86_64/release/ffmpeg.zip",
+        "ffprobe": f"{_RIEDL}/macos/x86_64/release/ffprobe.zip",
         "ext": "zip"
     },
     {
