@@ -11,13 +11,12 @@ from urllib.request import Request, urlopen
 # Based on industry standards used by projects like LosslessCut and yt-dlp.
 _RIEDL = "https://ffmpeg.martin-riedl.de/redirect/latest"
 _GYAN = "https://www.gyan.dev/ffmpeg/builds"
-_BTBN = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
 
 TARGETS = [
     {
         "triple": "x86_64-apple-darwin",
-        "ffmpeg": f"{_RIEDL}/macos/x86_64/release/ffmpeg.zip",
-        "ffprobe": f"{_RIEDL}/macos/x86_64/release/ffprobe.zip",
+        "ffmpeg": f"{_RIEDL}/macos/amd64/release/ffmpeg.zip",
+        "ffprobe": f"{_RIEDL}/macos/amd64/release/ffprobe.zip",
         "ext": "zip"
     },
     {
@@ -34,15 +33,15 @@ TARGETS = [
     },
     {
         "triple": "x86_64-unknown-linux-gnu",
-        "ffmpeg": f"{_BTBN}/ffmpeg-master-latest-linux64-gpl.tar.xz",
-        "ffprobe": "INCLUDED",
-        "ext": "tar.xz"
+        "ffmpeg": f"{_RIEDL}/linux/amd64/release/ffmpeg.zip",
+        "ffprobe": f"{_RIEDL}/linux/amd64/release/ffprobe.zip",
+        "ext": "zip"
     },
     {
         "triple": "aarch64-unknown-linux-gnu",
-        "ffmpeg": f"{_BTBN}/ffmpeg-master-latest-linuxarm64-gpl.tar.xz",
-        "ffprobe": "INCLUDED",
-        "ext": "tar.xz"
+        "ffmpeg": f"{_RIEDL}/linux/arm64/release/ffmpeg.zip",
+        "ffprobe": f"{_RIEDL}/linux/arm64/release/ffprobe.zip",
+        "ext": "zip"
     }
 ]
 
