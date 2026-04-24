@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 # Based on industry standards used by projects like LosslessCut and yt-dlp.
 _RIEDL = "https://ffmpeg.martin-riedl.de/redirect/latest"
 _GYAN = "https://www.gyan.dev/ffmpeg/builds"
+_BTBN = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
 
 TARGETS = [
     {
@@ -28,6 +29,12 @@ TARGETS = [
     {
         "triple": "x86_64-pc-windows-msvc",
         "ffmpeg": f"{_GYAN}/ffmpeg-release-essentials.zip",
+        "ffprobe": "INCLUDED",
+        "ext": "zip"
+    },
+    {
+        "triple": "aarch64-pc-windows-msvc",
+        "ffmpeg": f"{_BTBN}/ffmpeg-n8.1-latest-winarm64-gpl-8.1.zip",
         "ffprobe": "INCLUDED",
         "ext": "zip"
     },
